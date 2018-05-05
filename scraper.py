@@ -140,59 +140,6 @@ def parsePPLpage(url, table):
     except:
         print "Error saving to DB" + ": " + str(sys.exc_info()[1])
 
-
-def parseCategoryPage(url, table):
-
-    targetUrl = url
-    try:
-        html = scraperwiki.scrape(targetUrl)
-        root = lxml.html.fromstring(html)
-    
-        #handle pagination when there are more than 50 countries for a given fuel type
-        pagination = root.xpath("//a[@title='Next']/@href")
-        if len(pagination) > 0:
-            targetUrl = 'http://www.industryabout.com'+pagination[0].replace('start=50','limit=0')
-            html = scraperwiki.scrape(targetUrl)
-            root = lxml.html.fromstring(html)
-
-    except:
-        print sys.exc_info()[0]
-        print "Can't download " + targetUrl
-        return
-    
-    subLinks = []
-
-    #this matches on category pages (list of fuels or countries)
-    if len(root.xpath("//table[@class='contentpane']//td/a[@class='category']")) > 0:
-        subLinks = root.xpath("//a[@class='category']/@href")
-
-    #this matches on intermediate pages that occur for some contries (especially the US)
-    #those may be linked from several different paths and should be skipped if already processed
-    elif len(root.xpath("//table[@class='contentpane']//li//a")) > 0:
-        if table == "powerplants":
-            subLinks = root.xpath("//table[@class='contentpane']//li//a[contains(.,'Energy') or contains(.,'Power')]/@href")
-        elif table == "refineries":
-            subLinks = root.xpath("//table[@class='contentpane']//li//a[contains(.,'Refineries')]/@href")
-        
-    for link in subLinks:
-        if link not in processedLinks:
-            processedLinks.append(link)
-            parseCategoryPage('http://www.industryabout.com'+link, table)
-
-    #this matches on powerplants list
-    if len(root.xpath("//tr[starts-with(@class,'sectiontableentry')]//a")) > 0:
-        subLinks = root.xpath("//tr[starts-with(@class,'sectiontableentry')]//a/@href")
-        for link in subLinks:
-            if link not in processedLinks:
-                parsePPLpage('http://www.industryabout.com'+link, table)
-                processedLinks.append(link)
-    
-    if len(subLinks) == 0:
-        print "No links could be found in " + targetUrl
-
-    return
-
-
 countryLookup = createCountriesDict()
 preferredTermsLookup = createPreferredTermsDict()
 
@@ -200,4 +147,4 @@ preferredTermsLookup = createPreferredTermsDict()
 #split in chunks to avoid reaching execution time limit
 
 home = "https://www.industryabout.com/world-copper-mining-map"
-parseCategoryPage(home, 'mining')
+parsePPLpage(home, 'mining')
